@@ -12,23 +12,14 @@ TELEGRAM_CHAT_ID = "8189935997"
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    rss_url = "https://www.antaranews.com/terkini/rss"
-    
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
-    
-    # Diberi timeout 15 detik agar tidak nyangkut
-    response_rss = requests.get(rss_url, headers=headers, timeout=15)
-    
-    if response_rss.status_code != 200:
-        raise Exception(f"Gagal akses RSS, status code: {response_rss.status_code}")
-        
-    feed = feedparser.parse(response_rss.content)
+    # Mengambil berita otomatis dari RSS Feed CNBC Indonesia (Kanal Market)
+    rss_url = "https://www.cnbcindonesia.com/market/rss"
+    feed = feedparser.parse(rss_url)
     
     if not feed.entries:
-        raise Exception("RSS Feed terbaca kosong atau strukturnya berubah.")
+        raise Exception("Gagal mengambil berita dari RSS Feed.")
         
+    # Ambil artikel teratas (paling baru)
     artikel_terbaru = feed.entries[0]
     judul = artikel_terbaru.title
     deskripsi = artikel_terbaru.summary if 'summary' in artikel_terbaru else ""
@@ -67,13 +58,12 @@ try:
         "parse_mode": "Markdown"
     }
 
-    # Diberi timeout 15 detik agar proses kirim tidak nge-hang
-    kirim = requests.post(url_telegram, data=payload, timeout=15)
+    kirim = requests.post(url_telegram, data=payload)
 
     if kirim.status_code == 200:
-        print("✅ BERHASIL! Pesan terkirim.")
+        print("✅ BERHASIL! Cek Telegram lu sekarang.")
     else:
-        print(f"❌ Gagal ke Telegram: {kirim.text}")
+        print(f"❌ Gagal ngirim ke Telegram. Pesan dari server Telegram: {kirim.text}")
 
 except Exception as e:
     print(f"❌ TERJADI KESALAHAN: {e}")
