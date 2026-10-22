@@ -1,4 +1,3 @@
-!pip install -q google-genai requests feedparser
 
 from google import genai
 import requests
