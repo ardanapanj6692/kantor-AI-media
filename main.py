@@ -12,14 +12,23 @@ TELEGRAM_CHAT_ID = "8189935997"
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    # Mengambil berita otomatis dari RSS Feed CNBC Indonesia (Kanal Market)
     rss_url = "https://www.cnbcindonesia.com/market/rss"
-    feed = feedparser.parse(rss_url)
+    
+    # Menambahkan User-Agent agar tidak diblokir oleh server portal berita
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    
+    response_rss = requests.get(rss_url, headers=headers, timeout=15)
+    
+    if response_rss.status_code != 200:
+        raise Exception(f"Gagal akses RSS, status code: {response_rss.status_code}")
+        
+    feed = feedparser.parse(response_rss.content)
     
     if not feed.entries:
-        raise Exception("Gagal mengambil berita dari RSS Feed.")
+        raise Exception("RSS Feed terbaca kosong atau strukturnya berubah.")
         
-    # Ambil artikel teratas (paling baru)
     artikel_terbaru = feed.entries[0]
     judul = artikel_terbaru.title
     deskripsi = artikel_terbaru.summary if 'summary' in artikel_terbaru else ""
@@ -45,7 +54,7 @@ try:
 
     print("🤖 Pekerja AI sedang meracik konten...")
     response = client.models.generate_content(
-        model='gemini-3.8-flash',
+        model='gemini-3.8flash',
         contents=prompt_kantor_ai
     )
     hasil_akhir = response.text
@@ -61,9 +70,9 @@ try:
     kirim = requests.post(url_telegram, data=payload)
 
     if kirim.status_code == 200:
-        print("✅ BERHASIL! Cek Telegram lu sekarang.")
+        print("✅ BERHASIL! Pesan terkirim.")
     else:
-        print(f"❌ Gagal ngirim ke Telegram. Pesan dari server Telegram: {kirim.text}")
+        print(f"❌ Gagal ke Telegram: {kirim.text}")
 
 except Exception as e:
     print(f"❌ TERJADI KESALAHAN: {e}")
