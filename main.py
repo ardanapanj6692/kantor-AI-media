@@ -12,13 +12,13 @@ TELEGRAM_CHAT_ID = "8189935997"
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    # Menggunakan RSS Antara News yang lebih terbuka
     rss_url = "https://www.antaranews.com/terkini/rss"
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
+    # Diberi timeout 15 detik agar tidak nyangkut
     response_rss = requests.get(rss_url, headers=headers, timeout=15)
     
     if response_rss.status_code != 200:
@@ -67,7 +67,8 @@ try:
         "parse_mode": "Markdown"
     }
 
-    kirim = requests.post(url_telegram, data=payload)
+    # Diberi timeout 15 detik agar proses kirim tidak nge-hang
+    kirim = requests.post(url_telegram, data=payload, timeout=15)
 
     if kirim.status_code == 200:
         print("✅ BERHASIL! Pesan terkirim.")
