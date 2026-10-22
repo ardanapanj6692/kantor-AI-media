@@ -12,9 +12,9 @@ TELEGRAM_CHAT_ID = "8189935997"
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    rss_url = "https://www.cnbcindonesia.com/market/rss"
+    # Menggunakan RSS Antara News yang lebih terbuka
+    rss_url = "https://www.antaranews.com/terkini/rss"
     
-    # Menambahkan User-Agent agar tidak diblokir oleh server portal berita
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
@@ -54,7 +54,7 @@ try:
 
     print("🤖 Pekerja AI sedang meracik konten...")
     response = client.models.generate_content(
-        model='gemini-3.8flash',
+        model='gemini-3.8-flash',
         contents=prompt_kantor_ai
     )
     hasil_akhir = response.text
