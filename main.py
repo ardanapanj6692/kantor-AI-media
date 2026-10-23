@@ -3,20 +3,19 @@ from google import genai
 import requests
 import feedparser
 
-# Mengambil kredensial secara aman dari Environment Variables (GitHub Secrets)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    rss_url = "https://www.antaranews.com/terkini/rss"
+    # URL RSS Antara News versi XML stabil
+    rss_url = "https://www.antaranews.com/rss/terkini.xml"
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
-    # Pengaman timeout 15 detik agar tidak infinite loading
     response_rss = requests.get(rss_url, headers=headers, timeout=15)
     
     if response_rss.status_code != 200:
