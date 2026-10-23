@@ -9,7 +9,6 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    # URL RSS Antara News versi XML stabil
     rss_url = "https://www.antaranews.com/rss/terkini.xml"
     
     headers = {
@@ -58,10 +57,11 @@ try:
 
     print("📤 Mengirim hasil ke Telegram...")
     url_telegram = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    
+    # Menghapus parse_mode agar Telegram tidak rewel memvalidasi simbol Markdown
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
-        "text": f"🚀 **HASIL KERJA KANTOR AI MEDIA** 🚀\n\n📌 **Judul Berita Asli:** {judul}\n\n{hasil_akhir}",
-        "parse_mode": "Markdown"
+        "text": f"🚀 HASIL KERJA KANTOR AI MEDIA 🚀\n\n📌 Judul Berita Asli: {judul}\n\n{hasil_akhir}"
     }
 
     kirim = requests.post(url_telegram, data=payload, timeout=15)
