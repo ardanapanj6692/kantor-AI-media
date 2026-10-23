@@ -1,25 +1,32 @@
-
+import os
 from google import genai
 import requests
 import feedparser
 
-# ==========================================
-# DATA LU
-# ==========================================
-GEMINI_API_KEY = "AQ.Ab8RN6KpiFWcmkSqU_zxui18QB_4TMKuMtZtfWik-YqttLvNYA"
-TELEGRAM_BOT_TOKEN = "8331636234:AAERUaFAN3oyL-uG_lIQDGPEpQwniks4s0g"
-TELEGRAM_CHAT_ID = "8189935997"
+# Mengambil kredensial secara aman dari Environment Variables (GitHub Secrets)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 try:
     print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    # Mengambil berita otomatis dari RSS Feed CNBC Indonesia (Kanal Market)
-    rss_url = "https://www.cnbcindonesia.com/market/rss"
-    feed = feedparser.parse(rss_url)
+    rss_url = "https://www.antaranews.com/terkini/rss"
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    
+    # Pengaman timeout 15 detik agar tidak infinite loading
+    response_rss = requests.get(rss_url, headers=headers, timeout=15)
+    
+    if response_rss.status_code != 200:
+        raise Exception(f"Gagal akses RSS, status code: {response_rss.status_code}")
+        
+    feed = feedparser.parse(response_rss.content)
     
     if not feed.entries:
-        raise Exception("Gagal mengambil berita dari RSS Feed.")
+        raise Exception("RSS Feed terbaca kosong atau strukturnya berubah.")
         
-    # Ambil artikel teratas (paling baru)
     artikel_terbaru = feed.entries[0]
     judul = artikel_terbaru.title
     deskripsi = artikel_terbaru.summary if 'summary' in artikel_terbaru else ""
@@ -58,12 +65,12 @@ try:
         "parse_mode": "Markdown"
     }
 
-    kirim = requests.post(url_telegram, data=payload)
+    kirim = requests.post(url_telegram, data=payload, timeout=15)
 
     if kirim.status_code == 200:
-        print("✅ BERHASIL! Cek Telegram lu sekarang.")
+        print("✅ BERHASIL! Pesan terkirim.")
     else:
-        print(f"❌ Gagal ngirim ke Telegram. Pesan dari server Telegram: {kirim.text}")
+        print(f"❌ Gagal ke Telegram: {kirim.text}")
 
 except Exception as e:
     print(f"❌ TERJADI KESALAHAN: {e}")
