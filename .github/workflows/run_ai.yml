@@ -1,10 +1,9 @@
 name: Kantor AI Media Automation
 
 on:
+  workflow_dispatch:
   schedule:
-    # Berjalan otomatis setiap jam 08:00 UTC (atur sesuai keinginan)
-    - cron: '0 0 * * *'
-  workflow_dispatch: # Tombol manual di GitHub biar lu bisa tes kapan aja
+    - cron: '0 */3 * * *' # Berjalan otomatis setiap 3 jam sekali
 
 jobs:
   run-ai:
@@ -19,11 +18,13 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install google-genai requests feedparser
+        run: |
+          pip install --no-cache-dir google-genai requests feedparser
 
       - name: Run AI Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
+        run: |
+          python main.py
