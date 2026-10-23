@@ -34,13 +34,11 @@ def fetch_rss_with_retry(url, headers, retries=3):
     raise Exception(f"Gagal total mengakses RSS: {url}")
 
 try:
-    # Daftar Niche Pilihan: Keuangan & Teknologi
     target_niches = [
         {"niche": "Keuangan & Bisnis", "url": "https://www.antaranews.com/rss/ekonomi.xml"},
         {"niche": "Teknologi & Sains", "url": "https://www.antaranews.com/rss/tekno.xml"}
     ]
     
-    # Pilih salah satu niche secara acak setiap script berjalan
     pilihan = random.choice(target_niches)
     niche_aktif = pilihan["niche"]
     rss_url = pilihan["url"]
@@ -80,12 +78,22 @@ try:
     Buatkan caption profesional, 5 hashtag tertarget, dan 3 prompt visual B-roll yang mendukung.
     """
 
-    print("🤖 Pekerja AI sedang meracik konten...")
-    response = client.models.generate_content(
-        model='gemini-3.8-flash',
-        contents=prompt_kantor_ai
-    )
-    hasil_akhir = response.text
+    # Retry loop khusus untuk Gemini API antisipasi error 503 High Demand
+    hasil_akhir = None
+    for attempt in range(3):
+        try:
+            print(f"🤖 Pekerja AI sedang meracik konten (Percobaan {attempt+1}/3)...")
+            response = client.models.generate_content(
+                model='gemini-3.8-flash',
+                contents=prompt_kantor_ai
+            )
+            hasil_akhir = response.text
+            break
+        except Exception as ai_err:
+            print(f"⚠️ Gemini sibuk/error (503): {ai_err}, mencoba ulang dalam 5 detik...")
+            time.sleep(5)
+            if attempt == 2:
+                raise Exception("Gemini API gagal merespons setelah 3 kali percobaan karena server sibuk.")
 
     print("📤 Mengirim hasil ke Telegram...")
     url_telegram = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
