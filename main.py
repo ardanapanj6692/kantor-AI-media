@@ -1,26 +1,45 @@
 import os
+import time
 from google import genai
 import requests
 import feedparser
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-try:
-    print("⏳ Mengambil berita terbaru dari internet (RSS Feed)...")
-    rss_url = "https://www.antaranews.com/rss/terkini.xml"
+def fetch_rss_with_retry(url, headers, retries=3):
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        backoff_factor=2,
+        status_forcelist=[500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
     
+    for attempt in range(retries):
+        try:
+            print(f"⏳ Mengambil berita (Percobaan {attempt+1}/{retries})...")
+            response = session.get(url, headers=headers, timeout=15)
+            if response.status_code == 200:
+                return response.content
+        except Exception as e:
+            print(f"⚠️ Koneksi terputus: {e}, mencoba ulang dalam 3 detik...")
+            time.sleep(3)
+    raise Exception("Gagal total mengakses RSS setelah beberapa kali percobaan.")
+
+try:
+    rss_url = "https://www.antaranews.com/rss/terkini.xml"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
-    response_rss = requests.get(rss_url, headers=headers, timeout=15)
-    
-    if response_rss.status_code != 200:
-        raise Exception(f"Gagal akses RSS, status code: {response_rss.status_code}")
-        
-    feed = feedparser.parse(response_rss.content)
+    rss_content = fetch_rss_with_retry(rss_url, headers)
+    feed = feedparser.parse(rss_content)
     
     if not feed.entries:
         raise Exception("RSS Feed terbaca kosong atau strukturnya berubah.")
@@ -57,8 +76,6 @@ try:
 
     print("📤 Mengirim hasil ke Telegram...")
     url_telegram = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    
-    # Menghapus parse_mode agar Telegram tidak rewel memvalidasi simbol Markdown
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": f"🚀 HASIL KERJA KANTOR AI MEDIA 🚀\n\n📌 Judul Berita Asli: {judul}\n\n{hasil_akhir}"
