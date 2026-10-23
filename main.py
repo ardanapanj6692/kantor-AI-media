@@ -69,7 +69,7 @@ try:
     Anda adalah sistem Multi-Agent Kantor Virtual Media yang berfokus pada analisis mendalam untuk niche {niche_aktif}. Olah berita mentah berikut:
     "{berita_mentah}"
 
-    Jalankan tugas berurutan berikut secara profesional dan tajam:
+    Jalankan tugas berurutan berikut secara profesional, padat, dan tajam (jangan terlalu bertele-tele agar muat di pesan singkat):
     [AGENT 1: TREND & DATA ANALYST]
     Ekstrak 3 poin inti, implikasi pasar/industri, serta data angka/fakta kunci dari berita di atas.
     [AGENT 2: VIRAL SCRIPTWRITER]
@@ -78,7 +78,6 @@ try:
     Buatkan caption profesional, 5 hashtag tertarget, dan 3 prompt visual B-roll yang mendukung.
     """
 
-    # Retry loop khusus untuk Gemini API antisipasi error 503 High Demand
     hasil_akhir = None
     for attempt in range(3):
         try:
@@ -93,13 +92,21 @@ try:
             print(f"⚠️ Gemini sibuk/error (503): {ai_err}, mencoba ulang dalam 5 detik...")
             time.sleep(5)
             if attempt == 2:
-                raise Exception("Gemini API gagal merespons setelah 3 kali percobaan karena server sibuk.")
+                raise Exception("Gemini API gagal merespons setelah 3 kali percobaan.")
 
     print("📤 Mengirim hasil ke Telegram...")
     url_telegram = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    
+    # Format teks lengkap
+    pesan_lengkap = f"🚀 KANTOR AI MEDIA [{niche_aktif.upper()}] 🚀\n\n📌 Judul: {judul}\n\n{hasil_akhir}"
+    
+    # Pengaman: Jika karakter lebih dari 4000, potong otomatis agar tidak error Bad Request
+    if len(pesan_lengkap) > 4000:
+        pesan_lengkap = pesan_lengkap[:3950] + "\n\n[... Pesan dipotong otomatis karena melewati batas maksimal Telegram]"
+
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
-        "text": f"🚀 KANTOR AI MEDIA [{niche_aktif.upper()}] 🚀\n\n📌 Judul: {judul}\n\n{hasil_akhir}"
+        "text": pesan_lengkap
     }
 
     kirim = requests.post(url_telegram, data=payload, timeout=15)
