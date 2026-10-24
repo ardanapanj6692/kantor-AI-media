@@ -10,6 +10,17 @@ from urllib3.util.retry import Retry
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+LOG_FILE = "seen_urls.txt"
+
+def load_seen_urls():
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "r") as f:
+            return set(line.strip() for line in f if line.strip())
+    return set()
+
+def save_seen_url(url):
+    with open(LOG_FILE, "a") as f:
+        f.write(f"{url}\n")
 
 def fetch_rss_with_retry(url, headers, retries=3):
     session = requests.Session()
@@ -34,33 +45,50 @@ def fetch_rss_with_retry(url, headers, retries=3):
     raise Exception(f"Gagal total mengakses RSS: {url}")
 
 try:
+    seen_urls = load_seen_urls()
+
     target_niches = [
         {"niche": "Keuangan & Bisnis", "url": "https://www.antaranews.com/rss/ekonomi.xml"},
         {"niche": "Teknologi & Sains", "url": "https://www.antaranews.com/rss/tekno.xml"}
     ]
     
-    pilihan = random.choice(target_niches)
-    niche_aktif = pilihan["niche"]
-    rss_url = pilihan["url"]
+    # Acak urutan niche biar tidak monoton
+    random.shuffle(target_niches)
     
-    print(f"🎯 Niche Terpilih Sesi Ini: {niche_aktif}")
+    artikel_terpilih = None
+    niche_aktif = ""
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
-    
-    rss_content = fetch_rss_with_retry(rss_url, headers)
-    feed = feedparser.parse(rss_content)
-    
-    if not feed.entries:
-        raise Exception("RSS Feed terbaca kosong atau strukturnya berubah.")
+
+    # Cari artikel baru yang belum pernah diproses
+    for item in target_niches:
+        rss_content = fetch_rss_with_retry(item["url"], headers)
+        feed = feedparser.parse(rss_content)
         
-    artikel_terbaru = feed.entries[0]
-    judul = artikel_terbaru.title
-    deskripsi = artikel_terbaru.summary if 'summary' in artikel_terbaru else ""
+        for entry in feed.entries[:10]: # Cek 10 berita teratas
+            link = entry.link
+            if link not in seen_urls:
+                artikel_terpilih = entry
+                niche_aktif = item["niche"]
+                break
+        
+        if artikel_terpilih:
+            break
+
+    if not artikel_terpilih:
+        print("ℹ️ Tidak ada berita baru yang belum pernah dikirim. Skip eksekusi kali ini.")
+        exit(0)
+
+    judul = artikel_terpilih.title
+    link = artikel_terpilih.link
+    deskripsi = artikel_terpilih.summary if 'summary' in artikel_terpilih else ""
     
+    print(f"🎯 Niche Terpilih: {niche_aktif}")
+    print(f"📰 Berita BARU Ditarik: {judul}")
+
     berita_mentah = f"Niche: {niche_aktif}\nJudul: {judul}\nIsi Ringkas: {deskripsi}"
-    print(f"📰 Berita Berhasil Ditarik: {judul}")
 
     print("⏳ Menghubungkan ke Gemini API...")
     client = genai.Client(api_key=GEMINI_API_KEY)
@@ -69,7 +97,7 @@ try:
     Anda adalah sistem Multi-Agent Kantor Virtual Media yang berfokus pada analisis mendalam untuk niche {niche_aktif}. Olah berita mentah berikut:
     "{berita_mentah}"
 
-    Jalankan tugas berurutan berikut secara profesional, padat, dan tajam (jangan terlalu bertele-tele agar muat di pesan singkat):
+    Jalankan tugas berurutan berikut secara profesional, padat, dan tajam:
     [AGENT 1: TREND & DATA ANALYST]
     Ekstrak 3 poin inti, implikasi pasar/industri, serta data angka/fakta kunci dari berita di atas.
     [AGENT 2: VIRAL SCRIPTWRITER]
@@ -89,7 +117,7 @@ try:
             hasil_akhir = response.text
             break
         except Exception as ai_err:
-            print(f"⚠️ Gemini sibuk/error (503): {ai_err}, mencoba ulang dalam 5 detik...")
+            print(f"⚠️ Gemini sibuk/error: {ai_err}, mencoba ulang dalam 5 detik...")
             time.sleep(5)
             if attempt == 2:
                 raise Exception("Gemini API gagal merespons setelah 3 kali percobaan.")
@@ -97,10 +125,8 @@ try:
     print("📤 Mengirim hasil ke Telegram...")
     url_telegram = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
-    # Format teks lengkap
     pesan_lengkap = f"🚀 KANTOR AI MEDIA [{niche_aktif.upper()}] 🚀\n\n📌 Judul: {judul}\n\n{hasil_akhir}"
     
-    # Pengaman: Jika karakter lebih dari 4000, potong otomatis agar tidak error Bad Request
     if len(pesan_lengkap) > 4000:
         pesan_lengkap = pesan_lengkap[:3950] + "\n\n[... Pesan dipotong otomatis karena melewati batas maksimal Telegram]"
 
@@ -113,6 +139,7 @@ try:
 
     if kirim.status_code == 200:
         print("✅ BERHASIL! Pesan terkirim.")
+        save_seen_url(link) # Simpan link agar tidak dikirim ulang nanti
     else:
         print(f"❌ Gagal ke Telegram: {kirim.text}")
 
