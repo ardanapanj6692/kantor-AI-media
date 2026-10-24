@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '0 */3 * * *'
 
+permissions:
+  contents: write  # <-- INI IZIN AGAR GITHUB ACTIONS BISA PUSH FILE RIWAYAT
+
 jobs:
   run-ai:
     runs-on: ubuntu-latest
