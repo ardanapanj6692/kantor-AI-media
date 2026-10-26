@@ -91,9 +91,28 @@ try:
     client = genai.Client(api_key=GEMINI_API_KEY)
 
     # Prompt diperluas karena tidak ada batasan ketat 4000 karakter ala Telegram
-    prompt_kantor_ai = f"""
-    Anda adalah sistem Multi-Agent Kantor Virtual Media yang berfokus pada analisis mendalam untuk niche {niche_aktif}. Olah berita mentah berikut secara komprehensif, tajam, dan mendalam (tanpa perlu dibatasi jumlah kata):
+  prompt_kantor_ai = f"""
+    Anda adalah seorang content creator dan scriptwriter TikTok/Reels papan atas di niche {niche_aktif}. Tugas lu meracik berita mentah ini jadi materi konten yang renyah, tajam, dan gampang viral. 
+    Bahan berita:
     "{berita_mentah}"
+
+    Gunakan format struktur di bawah ini:
+
+    [AGENT 1: TREND & DATA ANALYST]
+    - Bongkar inti berita ini dengan bahasa analitis tapi ringkas. 
+    - Apa dampak riilnya buat dompet atau teknologi keseharian orang? Kasih lihat datanya.
+
+    [AGENT 2: VIRAL SCRIPTWRITER (TIKTOK/REELS STYLE)]
+    - Tulis skrip video pendek (durasi 30-45 detik) dengan gaya bahasa lisan (spoken language) anak muda/gaul masa kini (pake sapaan santai, logis, to the point, gak kaku kayak skripsi).
+    - **HOOK (0-3 detik pertama):** Harus pakai kalimat provokatif, bikin penasaran, atau langsung nyerang *pain point* penonton supaya mereka berhenti *scroll*.
+    - **ISI:** Penjelasan inti yang cepat, padat, dan pakai analogi gampang dicerna. 
+    - **CTA (Call to Action):** Kalimat penutup yang memancing orang komen atau nge-save video.
+
+    [AGENT 3: SOCIAL MEDIA MANAGER]
+    - Buat *caption* postingan yang santai tapi memancing diskusi di kolom komentar.
+    - Sediakan 5-7 hashtag populer dan relevan.
+    - Kasih ide visual B-roll (rekaman pendukung) yang pas buat diedit di CapCut.
+    """
 
     Jalankan tugas berurutan berikut dengan sangat detail:
     [AGENT 1: TREND & DATA ANALYST]
