@@ -118,7 +118,7 @@ try:
         try:
             print(f"🤖 Pekerja AI sedang meracik konten lengkap (Percobaan {attempt+1}/3)...")
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-3.8-flash',
                 contents=prompt_kantor_ai
             )
             hasil_akhir = response.text
