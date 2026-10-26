@@ -8,8 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL") # Masukin ini nanti di Secrets GitHub
 LOG_FILE = "seen_urls.txt"
 
 def load_seen_urls():
@@ -91,25 +90,35 @@ try:
     print("⏳ Menghubungkan ke Gemini API...")
     client = genai.Client(api_key=GEMINI_API_KEY)
 
+    # Prompt diperluas karena tidak ada batasan ketat 4000 karakter ala Telegram
     prompt_kantor_ai = f"""
-    Anda adalah sistem Multi-Agent Kantor Virtual Media yang berfokus pada analisis mendalam untuk niche {niche_aktif}. Olah berita mentah berikut:
+    Anda adalah sistem Multi-Agent Kantor Virtual Media yang berfokus pada analisis mendalam untuk niche {niche_aktif}. Olah berita mentah berikut secara komprehensif, tajam, dan mendalam (tanpa perlu dibatasi jumlah kata):
     "{berita_mentah}"
 
-    Jalankan tugas berurutan berikut secara profesional, padat, dan tajam:
+    Jalankan tugas berurutan berikut dengan sangat detail:
     [AGENT 1: TREND & DATA ANALYST]
-    Ekstrak 3 poin inti, implikasi pasar/industri, serta data angka/fakta kunci dari berita di atas.
+    - Ekstrak poin inti secara mendalam.
+    - Bedah implikasi jangka panjang terhadap pasar, ekonomi, atau industri terkait.
+    - Jabarkan data angka, statistik, atau fakta kunci yang ada.
+
     [AGENT 2: VIRAL SCRIPTWRITER]
-    Buatkan skrip konten video pendek (TikTok/Reels/Shorts) durasi 30-45 detik dengan struktur Hook yang kuat, Isi yang padat informasi, dan Call to Action yang relevan.
+    - Buatkan skrip konten video pendek (TikTok/Reels/Shorts) yang sangat matang.
+    - Berikan pilihan Hook yang kuat (minimal 2 variasi).
+    - Isi penjelasan yang padat dan bernilai tinggi.
+    - Call to Action yang memancing interaksi.
+
     [AGENT 3: SOCIAL MEDIA MANAGER]
-    Buatkan caption profesional, 5 hashtag tertarget, dan 3 prompt visual B-roll yang mendukung.
+    - Buatkan draf caption profesional dan edukatif.
+    - Sediakan 5-10 hashtag tertarget.
+    - Berikan detail konsep visual atau prompt B-roll untuk editing video.
     """
 
     hasil_akhir = None
     for attempt in range(3):
         try:
-            print(f"🤖 Pekerja AI sedang meracik konten (Percobaan {attempt+1}/3)...")
+            print(f"🤖 Pekerja AI sedang meracik konten lengkap (Percobaan {attempt+1}/3)...")
             response = client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.0-flash',
                 contents=prompt_kantor_ai
             )
             hasil_akhir = response.text
@@ -120,26 +129,30 @@ try:
             if attempt == 2:
                 raise Exception("Gemini API gagal merespons setelah 3 kali percobaan.")
 
-    print("📤 Mengirim hasil ke Telegram...")
-    url_telegram = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    print("📤 Mengirim hasil lengkap ke Discord...")
     
-    pesan_lengkap = f"🚀 KANTOR AI MEDIA [{niche_aktif.upper()}] 🚀\n\n📌 Judul: {judul}\n\n🔗 Sumber: {link}\n\n{hasil_akhir}"
+    # Discord mendukung batas hingga 2000 karakter per blok pesan, 
+    # jadi kita pecah jika teksnya sangat panjang agar tidak error.
+    pesan_header = f"🚀 **KANTOR AI MEDIA [{niche_aktif.upper()}]** 🚀\n\n📌 **Judul:** {judul}\n🔗 **Sumber:** {link}\n\n"
     
-    if len(pesan_lengkap) > 4000:
-        pesan_lengkap = pesan_lengkap[:3950] + "\n\n[... Pesan dipotong otomatis karena melewati batas maksimal Telegram]"
+    # Gabungkan header dengan hasil AI
+    full_content = pesan_header + hasil_akhir
+    
+    # Discord membatasi 2000 karakter per pesan, kirim secara aman
+    chunks = [full_content[i:i+1900] for i in range(0, len(full_content), 1900)]
+    
+    success = True
+    for chunk in chunks:
+        payload = {"content": chunk}
+        response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=15)
+        if response.status_code not in [200, 204]:
+            print(f"❌ Gagal kirim ke Discord: {response.text}")
+            success = false
+            break
 
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": pesan_lengkap
-    }
-
-    kirim = requests.post(url_telegram, data=payload, timeout=15)
-
-    if kirim.status_code == 200:
-        print("✅ BERHASIL! Pesan terkirim.")
+    if success:
+        print("✅ BERHASIL! Laporan redaksi lengkap terkirim ke Discord.")
         save_seen_url(link)
-    else:
-        print(f"❌ Gagal ke Telegram: {kirim.text}")
 
 except Exception as e:
     print(f"❌ TERJADI KESALAHAN: {e}")
