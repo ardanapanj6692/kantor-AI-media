@@ -8,7 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL") # Masukin ini nanti di Secrets GitHub
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 LOG_FILE = "seen_urls.txt"
 
 def load_seen_urls():
@@ -90,8 +90,7 @@ try:
     print("⏳ Menghubungkan ke Gemini API...")
     client = genai.Client(api_key=GEMINI_API_KEY)
 
-    # Prompt diperluas karena tidak ada batasan ketat 4000 karakter ala Telegram
-  prompt_kantor_ai = f"""
+    prompt_kantor_ai = f"""
     Anda adalah seorang content creator dan scriptwriter TikTok/Reels papan atas di niche {niche_aktif}. Tugas lu meracik berita mentah ini jadi materi konten yang renyah, tajam, dan gampang viral. 
     Bahan berita:
     "{berita_mentah}"
@@ -114,24 +113,6 @@ try:
     - Kasih ide visual B-roll (rekaman pendukung) yang pas buat diedit di CapCut.
     """
 
-    Jalankan tugas berurutan berikut dengan sangat detail:
-    [AGENT 1: TREND & DATA ANALYST]
-    - Ekstrak poin inti secara mendalam.
-    - Bedah implikasi jangka panjang terhadap pasar, ekonomi, atau industri terkait.
-    - Jabarkan data angka, statistik, atau fakta kunci yang ada.
-
-    [AGENT 2: VIRAL SCRIPTWRITER]
-    - Buatkan skrip konten video pendek (TikTok/Reels/Shorts) yang sangat matang.
-    - Berikan pilihan Hook yang kuat (minimal 2 variasi).
-    - Isi penjelasan yang padat dan bernilai tinggi.
-    - Call to Action yang memancing interaksi.
-
-    [AGENT 3: SOCIAL MEDIA MANAGER]
-    - Buatkan draf caption profesional dan edukatif.
-    - Sediakan 5-10 hashtag tertarget.
-    - Berikan detail konsep visual atau prompt B-roll untuk editing video.
-    """
-
     hasil_akhir = None
     for attempt in range(3):
         try:
@@ -150,14 +131,9 @@ try:
 
     print("📤 Mengirim hasil lengkap ke Discord...")
     
-    # Discord mendukung batas hingga 2000 karakter per blok pesan, 
-    # jadi kita pecah jika teksnya sangat panjang agar tidak error.
     pesan_header = f"🚀 **KANTOR AI MEDIA [{niche_aktif.upper()}]** 🚀\n\n📌 **Judul:** {judul}\n🔗 **Sumber:** {link}\n\n"
-    
-    # Gabungkan header dengan hasil AI
     full_content = pesan_header + hasil_akhir
     
-    # Discord membatasi 2000 karakter per pesan, kirim secara aman
     chunks = [full_content[i:i+1900] for i in range(0, len(full_content), 1900)]
     
     success = True
@@ -166,7 +142,7 @@ try:
         response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=15)
         if response.status_code not in [200, 204]:
             print(f"❌ Gagal kirim ke Discord: {response.text}")
-            success = false
+            success = False
             break
 
     if success:
